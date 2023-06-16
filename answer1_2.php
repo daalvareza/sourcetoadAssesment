@@ -148,5 +148,76 @@ function printArray(array $array, string $indent = '    ', bool $isNested = fals
     echo ($isNested ? "" : "]");
 }
 
+/**
+ * Function to sort an array by one or more keys regardless of what level it is at
+ * It works directly with the array, not a copy, so, the original value will be modify it
+ * @param array $array array to be sorted, passed by reference
+ * @param array|string $sortKeys array with the string keys with which the ordering will be done (or just a string with one key)
+ */
+function recursiveSort(array &$array, array|string $sortKeys) {
+    // If we're only given one key, turn it into an array so we can use the same logic for all cases
+    if (!is_array($sortKeys)) {
+        $sortKeys = [$sortKeys];
+    }
+
+    // Sort the array, comparing the specified keys in order
+    uasort($array, function ($a, $b) use ($sortKeys) {
+        foreach ($sortKeys as $sortKey) {
+            // Get the values for this key from the two elements being compared
+            $aVal = getValue($a, $sortKey);
+            $bVal = getValue($b, $sortKey);
+
+            // If the values are the same, move on to the next key
+            if ($aVal == $bVal) {
+                continue;
+            }
+
+            // Otherwise, return the result of the comparison
+            return ($aVal < $bVal) ? -1 : 1;
+        }
+
+        // If we've compared all keys and found no differences, the array keeps the same
+        return 0;
+    });
+
+    // Recursively sort nested arrays
+    foreach ($array as &$value) {
+        if (is_array($value)) {
+            recursiveSort($value, $sortKeys);
+        }
+    }
+}
+
+/**
+ * Function that retrieves a value from an array by key, searching in the nested arrays too
+ * @param mixed $array array with the value to extract, if is not an array the function will return null
+ * @param string $key string key associated with the value to extract
+ * @return mixed value extracted from the array
+ */
+function getValue(mixed $array, string $key) {
+    // If the key exists in this array, return the value
+    if (isset($array[$key])) {
+        return $array[$key];
+    }
+
+    // If not, check any nested arrays
+    if (is_array($array)){
+        foreach ($array as $value) {
+            if (is_array($value)) {
+                $nestedVal = getValue($value, $key);
+                // If we found the key in a nested array, return the value
+                if ($nestedVal !== null) {
+                    return $nestedVal;
+                }
+            }
+        }
+    }
+
+    // If the key wasn't found, return null
+    return null;
+}
+
+$sortKeys = ['last_name', 'account_id'];
+recursiveSort($data, $sortKeys);
 printArray($data);
 ?>
